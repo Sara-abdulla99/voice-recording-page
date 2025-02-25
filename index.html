@@ -42,12 +42,12 @@
       .then(stream => {
         mediaRecorder = new MediaRecorder(stream);
 
-        // يحدث عند توفر بيانات صوتية جديدة
+        // عند توفر بيانات صوتية جديدة
         mediaRecorder.ondataavailable = event => {
           audioChunks.push(event.data);
         };
 
-        // يحدث عند إيقاف التسجيل
+        // عند إيقاف التسجيل
         mediaRecorder.onstop = () => {
           // تحويل المقطع الصوتي إلى Blob
           const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
@@ -57,11 +57,11 @@
           const audioURL = URL.createObjectURL(audioBlob);
           audioPlayback.src = audioURL;
 
-          // إرسال الملف إلى الخادم
+          // إرسال الملف الصوتي إلى Google Apps Script
           uploadAudio(audioBlob);
         };
 
-        // عند الضغط على زر "بدء التسجيل"
+        // بدء التسجيل
         startBtn.onclick = () => {
           audioChunks = [];
           mediaRecorder.start();
@@ -69,7 +69,7 @@
           stopBtn.disabled = false;
         };
 
-        // عند الضغط على زر "إيقاف التسجيل"
+        // إيقاف التسجيل
         stopBtn.onclick = () => {
           mediaRecorder.stop();
           startBtn.disabled = false;
@@ -80,26 +80,25 @@
         console.error('حدث خطأ في الوصول إلى الميكروفون:', error);
       });
 
-    // دالة رفع الملف الصوتي إلى الخادم
+    // دالة رفع الملف الصوتي
     function uploadAudio(audioBlob) {
       const formData = new FormData();
+      // append(name, value, filename)
       formData.append('audioFile', audioBlob, 'recorded_audio.webm');
 
-      fetch('/upload', {
+      // استخدمي رابط الويب آب الخاص بكِ بدلاً من YOUR_WEB_APP_URL
+      fetch('https://script.google.com/macros/s/AKfycbxtbm3yGYFnlWzB4xd0UG1vQLGUOZ1xSr-xnCg88la4WN1vooXe4cxGXUk8XeCYW0Rb/exec', {
         method: 'POST',
         body: formData
       })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('فشل في رفع الملف الصوتي');
-        }
-        return response.text();
-      })
+      .then(response => response.text())
       .then(data => {
         console.log('تم رفع الملف الصوتي بنجاح:', data);
+        alert('تم إرسال التسجيل بنجاح!');
       })
       .catch(error => {
         console.error('حدث خطأ أثناء رفع الملف الصوتي:', error);
+        alert('حدث خطأ أثناء الرفع.');
       });
     }
   </script>
