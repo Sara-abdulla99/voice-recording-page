@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <title>تسجيل الصوت</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    button {
+      font-size: 1.2em;
+      padding: 10px 20px;
+      margin: 5px;
+    }
+    #audioPlayback {
+      display: block;
+      margin: 20px auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>عبر عن الوطن بصوتك</h1>
+  <p>اضغط على زر التسجيل لبدء التسجيل الصوتي</p>
+  
+  <button id="startBtn">بدء التسجيل</button>
+  <button id="stopBtn" disabled>إيقاف التسجيل</button>
+  
+  <audio id="audioPlayback" controls></audio>
+  
+  <script>
+    let mediaRecorder;
+    let audioChunks = [];
+
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const audioPlayback = document.getElementById('audioPlayback');
+
+    // طلب إذن الوصول إلى الميكروفون
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        mediaRecorder = new MediaRecorder(stream);
+
+        // يحدث عند توفر بيانات صوتية جديدة
+        mediaRecorder.ondataavailable = event => {
+          audioChunks.push(event.data);
+        };
+
+        // يحدث عند إيقاف التسجيل
+        mediaRecorder.onstop = () => {
+          // تحويل المقطع الصوتي إلى Blob
+          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          audioChunks = [];
+
+          // عرض الصوت المسجل في الصفحة
+          const audioURL = URL.createObjectURL(audioBlob);
+          audioPlayback.src = audioURL;
+
+          // إرسال الملف إلى الخادم
+          uploadAudio(audioBlob);
+        };
+
+        // عند الضغط على زر "بدء التسجيل"
+        startBtn.onclick = () => {
+          audioChunks = [];
+          mediaRecorder.start();
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+        };
+
+        // عند الضغط على زر "إيقاف التسجيل"
+        stopBtn.onclick = () => {
+          mediaRecorder.stop();
+          startBtn.disabled = false;
+          stopBtn.disabled = true;
+        };
+      })
+      .catch(error => {
+        console.error('حدث خطأ في الوصول إلى الميكروفون:', error);
+      });
+
+    // دالة رفع الملف الصوتي إلى الخادم
+    function uploadAudio(audioBlob) {
+      const formData = new FormData();
+      formData.append('audioFile', audioBlob, 'recorded_audio.webm');
+
+      fetch('/upload', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('فشل في رفع الملف الصوتي');
+        }
+        return response.text();
+      })
+      .then(data => {
+        console.log('تم رفع الملف الصوتي بنجاح:', data);
+      })
+      .catch(error => {
+        console.error('حدث خطأ أثناء رفع الملف الصوتي:', error);
+      });
+    }
+  </script>
+</body>
+</html>
